@@ -1,0 +1,84 @@
+package Game
+
+import LinkedList
+import HashMap
+
+constant int NPC_PLAYER = 3
+constant int KNIGHT = 'h000'
+constant int SOLDIER = 'h001'
+
+let players = new HashMap<int, player>()
+let knights = new HashMap<int, unit>()
+let spawners = new LinkedList<rect>()
+let targets = new IterableMap<unit, unit>()
+
+// player
+function get_random_player () returns player
+	return players.get(GetRandomInt(0, players.size()))
+
+function get_random_knight () returns unit
+	return knights.get(GetRandomInt(0, players.size()))
+
+function s__players ()
+	let l = GetPlayers()
+	for i = 0 to l
+		if i < 1
+			let p = playerFromIndex(i)
+			players.put(i, p)
+			knights.put(i, CreateUnit(playerFromIndex(i), KNIGHT, 0, 0, 0))
+
+// spawns
+function s__spawners ()
+	spawners.add(gg_rct_left)
+	spawners.add(gg_rct_bottom)
+	spawners.add(gg_rct_right)
+	spawners.add(gg_rct_top)
+
+function spawn (int times)
+	let a = GetRandomInt(1, times)
+	for x = 0 to a
+		let r = spawners.getRandomElement()
+		let n = GetRandomInt(1, 2)
+		for i = 0 to n
+			let point = r.randomPoint()
+			CreateUnit(
+				playerFromIndex(NPC_PLAYER),
+				SOLDIER,
+				point.x,
+				point.y,
+				0
+			)
+
+function t__attack ()
+	let a = CreateTrigger()
+	a.registerTimerEvent(1, true)
+	a.addAction() () ->
+		let map = GetEntireMapRect()
+		let list = GetUnitsInRectAll(map).asList()
+		list.forEach() (unit t) ->
+			if t.getOwner().getId() == NPC_PLAYER
+				let knight = get_random_knight()
+				targets.put(t, knight)
+		targets.forEach() (unit u, unit t) ->
+			if u.isAlive() and t.isAlive()
+				u.issueTargetOrder("attack", t)
+
+function t__spawn ()
+	let a = CreateTrigger()
+	a.registerTimerEvent(10, true)
+	a.addAction() () ->
+		spawn(GetRandomInt(1, 2))
+
+function start ()
+	spawn(GetRandomInt(1, 2))
+
+// init
+init
+	// triggers
+	t__spawn()
+	t__attack()
+	// setup
+	s__spawners()
+	s__players()
+	// init
+	start()
